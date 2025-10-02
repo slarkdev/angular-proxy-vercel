@@ -4,8 +4,8 @@ export default async function handler(req, res) {
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
 
+  // Leer el body manualmente si req.body está vacío
   let body = req.body;
-
   if (!body || typeof body !== 'object') {
     try {
       const buffers = [];
@@ -13,7 +13,8 @@ export default async function handler(req, res) {
         buffers.push(chunk);
       }
       body = JSON.parse(Buffer.concat(buffers).toString());
-    } catch {
+    } catch (err) {
+      console.error('❌ Error al leer el body:', err);
       return res.status(400).json({ error: 'Body inválido' });
     }
   }
@@ -23,7 +24,8 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...req.headers,
+        // Solo reenviar cabeceras necesarias
+        ...(req.headers.authorization && { Authorization: req.headers.authorization }),
       },
       body: JSON.stringify(body),
     });
@@ -31,6 +33,7 @@ export default async function handler(req, res) {
     const data = await response.json();
     res.status(response.status).json(data);
   } catch (error) {
+    console.error('❌ Proxy error:', error);
     res.status(500).json({ error: 'Error al conectar con el backend' });
   }
 }
