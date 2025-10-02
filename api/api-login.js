@@ -4,19 +4,16 @@ export default async function handler(req, res) {
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
 
-  // Leer el body manualmente si req.body está vacío
-  let body = req.body;
-  if (!body || typeof body !== 'object') {
-    try {
-      const buffers = [];
-      for await (const chunk of req) {
-        buffers.push(chunk);
-      }
-      body = JSON.parse(Buffer.concat(buffers).toString());
-    } catch (err) {
-      console.error('❌ Error al leer el body:', err);
-      return res.status(400).json({ error: 'Body inválido' });
+  let body;
+  try {
+    const buffers = [];
+    for await (const chunk of req) {
+      buffers.push(chunk);
     }
+    body = JSON.parse(Buffer.concat(buffers).toString());
+  } catch (err) {
+    console.error('❌ Error al leer el body:', err);
+    return res.status(400).json({ error: 'Body inválido' });
   }
 
   try {
@@ -30,8 +27,8 @@ export default async function handler(req, res) {
       body: JSON.stringify(body),
     });
 
-    const data = await response.json();
-    res.status(response.status).json(data);
+    const text = await response.text(); // evita error si no es JSON
+    res.status(response.status).send(text);
   } catch (error) {
     console.error('❌ Proxy error:', error);
     res.status(500).json({ error: 'Error al conectar con el backend' });
